@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OfflineMessenger.Core\OfflineMessenger.Core.csproj" />
+    <ProjectReference Include="..\OfflineMessenger.Crypto\OfflineMessenger.Crypto.csproj" />
+    <ProjectReference Include="..\OfflineMessenger.Transport.Abstractions\OfflineMessenger.Transport.Abstractions.csproj" />
+    <ProjectReference Include="..\OfflineMessenger.Transport.Memory\OfflineMessenger.Transport.Memory.csproj" />
+    <ProjectReference Include="..\OfflineMessenger.Transport.Windows\OfflineMessenger.Transport.Windows.csproj" />
+    <ProjectReference Include="..\OfflineMessenger.Windows.Bluetooth\OfflineMessenger.Windows.Bluetooth.csproj" />
+  </ItemGroup>
+
+</Project>

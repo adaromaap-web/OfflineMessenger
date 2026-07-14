@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OfflineMessenger.Crypto\OfflineMessenger.Crypto.csproj" />
+    <ProjectReference Include="..\OfflineMessenger.Transport.Abstractions\OfflineMessenger.Transport.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

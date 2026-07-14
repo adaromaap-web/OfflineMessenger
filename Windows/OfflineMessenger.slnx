@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="InTheHand.Net.Bluetooth/WindowsBluetoothTest.csproj" Id="4f2e69f7-024e-4b6a-bfeb-62b8d738835a" />
+  <Project Path="OfflineMessenger.Core/OfflineMessenger.Core.csproj" />
+  <Project Path="OfflineMessenger.Crypto/OfflineMessenger.Crypto.csproj" />
+  <Project Path="OfflineMessenger.Transport.Abstractions/OfflineMessenger.Transport.Abstractions.csproj" />
+  <Project Path="OfflineMessenger.Transport.Memory/OfflineMessenger.Transport.Memory.csproj" />
+  <Project Path="OfflineMessenger.Transport.Windows/OfflineMessenger.Transport.Windows.csproj" />
+  <Project Path="OfflineMessenger.UI.Windows/OfflineMessenger.UI.Windows.csproj" />
+  <Project Path="OfflineMessenger.Windows.Bluetooth/OfflineMessenger.Windows.Bluetooth.csproj" Id="1555f1ac-9887-4ba6-aa6a-dcca9011b787" />
+</Solution>
