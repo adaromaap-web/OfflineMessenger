@@ -12,6 +12,7 @@ public class WindowsBluetoothTransport : ITransport
 {
     public event Action<byte[]>? DataReceived;
     public event Action? ConnectionReady;
+    public event Action<string>? DebugMessage;
 
     private BluetoothListener? _listener;
     private BluetoothClient? _client;
@@ -70,8 +71,11 @@ public class WindowsBluetoothTransport : ITransport
         {
             var buffer = new byte[4096];
 
+
+
             while (_stream != null)
             {
+
                 try
                 {
                     var read = await _stream.ReadAsync(buffer, 0, buffer.Length);
@@ -80,6 +84,10 @@ public class WindowsBluetoothTransport : ITransport
                     {
                         var data = new byte[read];
                         Array.Copy(buffer, data, read);
+
+                        DebugMessage?.Invoke(
+                            $"Windows received {read} bytes"
+                        );
 
                         DataReceived?.Invoke(data);
                     }
@@ -99,6 +107,10 @@ public class WindowsBluetoothTransport : ITransport
     {
         if (_stream == null)
             throw new InvalidOperationException("Not connected");
+
+        DebugMessage?.Invoke(
+            $"Windows sending {data.Length} bytes"
+        );
 
         await _stream.WriteAsync(data, 0, data.Length);
         await _stream.FlushAsync();

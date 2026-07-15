@@ -34,12 +34,11 @@ public partial class MainWindow : Window
 
         _bluetoothTransport = new BluetoothTransport();
 
-        _bluetoothTransport.DataReceived += data =>
+        _bluetoothTransport.DebugMessage += message =>
         {
             Dispatcher.Invoke(() =>
             {
-                MessageBox.Show(
-                    $"Bluetooth received: {data.Length} bytes");
+                MessageBox.Show(message);
             });
         };
 
@@ -109,6 +108,14 @@ public partial class MainWindow : Window
             _bluetoothChat = new ChatEngine(
             _bluetoothTransport,
             new CryptoService());
+
+            _bluetoothChat.StatusChanged += status =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(status);
+                });
+            };
 
             _bluetoothChat.StartHandshake();
 

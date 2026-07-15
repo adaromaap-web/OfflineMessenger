@@ -22,6 +22,8 @@ public class ChatEngine
 
     public event Action<string> MessageReceived;
 
+    public event Action<string> StatusChanged;
+
     private bool _handshakeCompleted = false;
     private bool _isInitiator = false;
 
@@ -31,7 +33,6 @@ public class ChatEngine
     {
         _transport = transport;
         _transport.DataReceived += OnDataReceived;
-        StartHandshake();
     }
 
     // =========================
@@ -124,6 +125,8 @@ public class ChatEngine
 
             _remotePublicKey = packet.PublicKey;
 
+            StatusChanged?.Invoke("HandshakeReply received");
+
             TryCompleteHandshake();
             return;
         }
@@ -154,11 +157,16 @@ public class ChatEngine
     // =========================
     private void TryCompleteHandshake()
     {
+        StatusChanged?.Invoke("TryCompleteHandshake called");
+
         if (_sharedSecret != null)
             return;
 
         if (_remotePublicKey == null || _keyPair == null)
+        {
+            StatusChanged?.Invoke("Missing keys");
             return;
+        }
 
         _sharedSecret = _keyExchange.DeriveSharedSecret(
             _keyPair.PrivateKey,
@@ -168,6 +176,10 @@ public class ChatEngine
         _sessionKey = Hkdf.DeriveKey(_sharedSecret);
 
         _handshakeCompleted = true;
+
+        StatusChanged?.Invoke(
+            "Shared secret created"
+        );
     }
 
     public Task WaitForHandshakeAsync()

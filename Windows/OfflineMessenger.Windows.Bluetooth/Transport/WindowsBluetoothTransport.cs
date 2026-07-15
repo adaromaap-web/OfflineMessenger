@@ -13,6 +13,8 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
         private DataWriter? writer;
         private DataReader? reader;
 
+        public event Action<string>? DebugMessage;
+
 
         public async Task<DeviceInformation?> DiscoverAsync()
         {
@@ -69,7 +71,8 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
                 InputStreamOptions.Partial;
 
 
-            Console.WriteLine("Bluetooth connected");
+            DebugMessage?.Invoke(
+                "Bluetooth connected");
         }
 
 
@@ -77,10 +80,17 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
         {
             if (writer == null)
             {
-                throw new Exception("Not connected");
+                throw new Exception(
+                    "Not connected");
             }
 
+
+            DebugMessage?.Invoke(
+                $"Windows sending {data.Length} bytes");
+
+
             writer.WriteBytes(data);
+
 
             await writer.StoreAsync();
             await writer.FlushAsync();
@@ -91,19 +101,31 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
         {
             if (reader == null)
             {
-                throw new Exception("Not connected");
+                throw new Exception(
+                    "Not connected");
             }
 
-            uint size = await reader.LoadAsync(1024);
+
+            uint size =
+                await reader.LoadAsync(1024);
+
 
             if (size == 0)
             {
                 return null;
             }
 
-            byte[] buffer = new byte[size];
+
+            byte[] buffer =
+                new byte[size];
+
 
             reader.ReadBytes(buffer);
+
+
+            DebugMessage?.Invoke(
+                $"Windows received {buffer.Length} bytes");
+
 
             return buffer;
         }

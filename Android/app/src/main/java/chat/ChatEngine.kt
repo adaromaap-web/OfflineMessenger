@@ -61,11 +61,10 @@ class ChatEngine(
 
                     2 -> {
 
-                        Log.d(
-                            "CHAT",
-                            "HandshakeReply received"
-                        )
+                        handleHandshakeReply(data)
                     }
+
+
 
 
                     3 -> {
@@ -92,6 +91,7 @@ class ChatEngine(
                     }
 
 
+
                     else -> {
 
                         Log.e(
@@ -112,7 +112,48 @@ class ChatEngine(
         }
     }
 
+    private fun handleHandshakeReply(
+        data: ByteArray
+    ) {
 
+        Log.d(
+            "CHAT",
+            "HandshakeReply received"
+        )
+
+        val remoteKey =
+            readPublicKey(data)
+
+
+        if (keyPair == null) {
+
+            Log.e(
+                "CHAT",
+                "No local key pair"
+            )
+
+            return
+        }
+
+
+        sharedSecret =
+            keyExchange.deriveSharedSecret(
+                keyPair!!.privateKey,
+                remoteKey
+            )
+
+
+        sessionKey =
+            Hkdf.deriveKey(
+                sharedSecret!!
+            )
+
+
+        Log.d(
+            "CHAT",
+            "Shared secret created from reply"
+        )
+    }
 
     private fun handleHandshakeInit(
         data: ByteArray

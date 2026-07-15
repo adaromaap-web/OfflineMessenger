@@ -1,7 +1,8 @@
-﻿using System;
+﻿using OfflineMessenger.Transport.Abstractions;
+using System;
 using System.Buffers.Binary;
 using System.Threading.Tasks;
-using OfflineMessenger.Transport.Abstractions;
+using System.Windows;
 
 namespace OfflineMessenger.Bluetooth.Windows.Transport
 {
@@ -10,13 +11,19 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
         private readonly WindowsBluetoothTransport bluetooth;
 
         public event Action<byte[]>? DataReceived;
+        public event Action<string>? DebugMessage;
+
 
 
         public BluetoothTransport()
         {
             bluetooth = new WindowsBluetoothTransport();
-        }
 
+            bluetooth.DebugMessage += message =>
+            {
+                DebugMessage?.Invoke(message);
+            };
+        }
 
 
         public async Task ConnectAsync(string deviceId)
@@ -106,7 +113,9 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
                         break;
                     }
 
-           
+                    MessageBox.Show(
+    $"Windows received bytes: {data.Length}"
+);
 
                     DataReceived?.Invoke(data);
 
