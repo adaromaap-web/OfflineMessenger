@@ -22,6 +22,8 @@ public class ChatEngine
 
     public event Action<string> MessageReceived;
 
+    public event Action<string>? DebugMessage;
+
     public event Action<string> StatusChanged;
 
     private bool _handshakeCompleted = false;
@@ -29,14 +31,19 @@ public class ChatEngine
 
     private bool _handshakeStarted = false;
 
+
     public ChatEngine(ITransport transport, ICryptoService crypto)
     {
         _transport = transport;
+
         _transport.DataReceived += OnDataReceived;
+
+        StartHandshake();
     }
 
+
     // =========================
-    // START HANDSHAKE (INITIATOR)
+    // START HANDSHAKE
     // =========================
     public async void StartHandshake()
     {
@@ -53,8 +60,11 @@ public class ChatEngine
             PublicKey = _keyPair.PublicKey
         };
 
-        await _transport.SendAsync(PacketSerializer.SerializeHandshake(packet));
+        await _transport.SendAsync(
+            PacketSerializer.SerializeHandshake(packet)
+        );
     }
+
 
     // =========================
     // SEND MESSAGE
@@ -62,9 +72,13 @@ public class ChatEngine
     public Task SendMessageAsync(string message)
     {
         if (!_handshakeCompleted)
-            throw new InvalidOperationException("Handshake not completed");
+            throw new InvalidOperationException(
+                "Handshake not completed"
+            );
+
 
         var plainBytes = Encoding.UTF8.GetBytes(message);
+
 
         var encrypted = new CryptoService().Encrypt(
             _sessionKey,
@@ -72,6 +86,7 @@ public class ChatEngine
             out var nonce,
             out var tag
         );
+
 
         var packet = new MessagePacket
         {
@@ -84,8 +99,13 @@ public class ChatEngine
             Tag = tag
         };
 
-        return _transport.SendAsync(PacketSerializer.Serialize(packet));
+
+        return _transport.SendAsync(
+            PacketSerializer.Serialize(packet)
+        );
     }
+
+
 
     // =========================
     // RECEIVE DATA
@@ -94,17 +114,24 @@ public class ChatEngine
     {
         if (!_handshakeStarted)
             return;
+
+
         var type = (MessageType)data[0];
 
-        // ---------------- HANDSHAKE INIT ----------------
+
+        // HANDSHAKE INIT
         if (type == MessageType.HandshakeInit)
         {
-            var packet = PacketSerializer.DeserializeHandshake(data);
+            var packet =
+                PacketSerializer.DeserializeHandshake(data);
+
 
             _remotePublicKey = packet.PublicKey;
 
-            // responder генерирует свой ключ
-            _keyPair = _keyExchange.GenerateKeyPair();
+
+            _keyPair =
+                _keyExchange.GenerateKeyPair();
+
 
             var reply = new HandshakePacket
             {
@@ -112,75 +139,156 @@ public class ChatEngine
                 PublicKey = _keyPair.PublicKey
             };
 
-            _transport.SendAsync(PacketSerializer.SerializeHandshake(reply));
+
+            _transport.SendAsync(
+                PacketSerializer.SerializeHandshake(reply)
+            );
+
 
             TryCompleteHandshake();
+
             return;
         }
 
-        // ---------------- HANDSHAKE REPLY ----------------
+
+
+        // HANDSHAKE REPLY
         if (type == MessageType.HandshakeReply)
         {
-            var packet = PacketSerializer.DeserializeHandshake(data);
+            var packet =
+                PacketSerializer.DeserializeHandshake(data);
+
 
             _remotePublicKey = packet.PublicKey;
 
-            StatusChanged?.Invoke("HandshakeReply received");
+
+            StatusChanged?.Invoke(
+                "HandshakeReply received"
+            );
+
 
             TryCompleteHandshake();
+
             return;
         }
 
-        // ---------------- CHAT ----------------
+
+
+        // CHAT
         if (!_handshakeCompleted)
             return;
 
-        var chatPacket = PacketSerializer.Deserialize(data);
+
+        var chatPacket =
+            PacketSerializer.Deserialize(data);
+
 
         if (chatPacket.Type != MessageType.Chat)
             return;
 
-        var decrypted = new CryptoService().Decrypt(
-            _sessionKey,
-            chatPacket.Payload,
-            chatPacket.Nonce,
-            chatPacket.Tag
-        );
 
-        var message = Encoding.UTF8.GetString(decrypted);
+        var decrypted =
+            new CryptoService().Decrypt(
+                _sessionKey,
+                chatPacket.Payload,
+                chatPacket.Nonce,
+                chatPacket.Tag
+            );
+
+
+        var message =
+            Encoding.UTF8.GetString(decrypted);
+
 
         MessageReceived?.Invoke(message);
     }
+
+
 
     // =========================
     // COMPLETE HANDSHAKE
     // =========================
     private void TryCompleteHandshake()
     {
-        StatusChanged?.Invoke("TryCompleteHandshake called");
+        StatusChanged?.Invoke(
+            "TryCompleteHandshake called"
+        );
+
+
+        if (_handshakeCompleted)
+            return;
+
 
         if (_sharedSecret != null)
             return;
 
-        if (_remotePublicKey == null || _keyPair == null)
+
+        if (_remotePublicKey == null ||
+            _keyPair == null)
         {
-            StatusChanged?.Invoke("Missing keys");
+            StatusChanged?.Invoke(
+                "Missing keys"
+            );
+
             return;
         }
 
-        _sharedSecret = _keyExchange.DeriveSharedSecret(
-            _keyPair.PrivateKey,
-            _remotePublicKey
+
+
+        DebugMessage?.Invoke(
+            $"WINDOWS LOCAL PUB: {Convert.ToHexString(_keyPair.PublicKey)}"
         );
 
-        _sessionKey = Hkdf.DeriveKey(_sharedSecret);
 
+        DebugMessage?.Invoke(
+            $"WINDOWS REMOTE PUB: {Convert.ToHexString(_remotePublicKey)}"
+        );
+
+
+
+        _sharedSecret =
+            _keyExchange.DeriveSharedSecret(
+                _keyPair.PrivateKey,
+                _remotePublicKey
+            );
+
+
+
+        DebugMessage?.Invoke(
+            $"WINDOWS SHARED: {Convert.ToHexString(_sharedSecret)}"
+        );
+
+
+
+        // ВАЖНО:
+        // Пока оставляем так для проверки совместимости
+        // с Android
+
+        _sessionKey = _sharedSecret;
+
+
+
+        DebugMessage?.Invoke(
+            $"AFTER HKDF LEN: {_sessionKey.Length}"
+        );
+
+
+        DebugMessage?.Invoke(
+            $"AFTER HKDF HEX: {Convert.ToHexString(_sessionKey)}"
+        );
+
+
+
+        // ВОТ ЭТОЙ СТРОКИ НЕ ХВАТАЛО
         _handshakeCompleted = true;
 
+
         StatusChanged?.Invoke(
-            "Shared secret created"
+            "Handshake completed"
         );
     }
+
+
 
     public Task WaitForHandshakeAsync()
     {

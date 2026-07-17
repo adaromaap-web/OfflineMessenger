@@ -4,6 +4,7 @@ import java.io.DataInputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
+import android.util.Log
 
 
 class BluetoothTransport(
@@ -55,6 +56,7 @@ class BluetoothTransport(
                 DataInputStream(input)
 
 
+
             while (true) {
 
                 try {
@@ -75,7 +77,19 @@ class BluetoothTransport(
 
                     reader.readFully(data)
 
+                    Log.d(
+                        "BT",
+                        "Delivering packet size: ${data.size}"
+                    )
 
+                    Log.d(
+                        "BT",
+                        "Packet hash=${data.contentHashCode()}"
+                    )
+                    Log.d(
+                        "BT",
+                        "CALLING RECEIVER hash=${data.contentHashCode()}"
+                    )
                     receiver?.invoke(data)
 
 

@@ -5,91 +5,102 @@ import com.offlinemessenger.android.ITransport
 import com.offlinemessenger.android.crypto.KeyExchangeService
 import com.offlinemessenger.android.crypto.KeyPair
 import com.offlinemessenger.android.crypto.Hkdf
+import com.offlinemessenger.android.crypto.CryptoService
 import com.offlinemessenger.android.protocol.MessageType
 import com.offlinemessenger.android.protocol.PacketSerializer
 import com.offlinemessenger.android.protocol.HandshakePacket
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
-
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class ChatEngine(
     private val transport: ITransport
 ) {
 
-
-    private val keyExchange =
-        KeyExchangeService()
-
+    private val keyExchange = KeyExchangeService()
 
     private var keyPair: KeyPair? = null
 
-
     private var sharedSecret: ByteArray? = null
-
 
     private var sessionKey: ByteArray? = null
 
-
-
-    private var messageReceiver:
-            ((String) -> Unit)? = null
-
+    private var messageReceiver: ((String) -> Unit)? = null
 
 
     init {
 
         transport.setReceiver { data ->
 
-            try {
+            Log.d(
+                "CHAT",
+                "Receiver got packet hash=${data.contentHashCode()}"
+            )
 
+            try {
 
                 if (data.isEmpty()) {
                     return@setReceiver
                 }
 
 
+                Log.d(
+                    "CHAT",
+                    "Packet type=${data[0].toInt()}, size=${data.size}"
+                )
+
+
                 when (data[0].toInt()) {
 
 
-                    1 -> {
-
-                        handleHandshakeInit(
-                            data
-                        )
-                    }
+                    1 -> handleHandshakeInit(data)
 
 
-                    2 -> {
-
-                        handleHandshakeReply(data)
-                    }
-
-
+                    2 -> handleHandshakeReply(data)
 
 
                     3 -> {
 
                         val packet =
-                            PacketSerializer.deserialize(
-                                data
+                            PacketSerializer.deserialize(data)
+
+
+                        val decrypted =
+                            CryptoService().decrypt(
+                                sessionKey!!,
+                                packet.payload,
+                                packet.nonce,
+                                packet.tag
                             )
 
 
                         val message =
-                            String(packet.payload)
+                            String(decrypted)
 
 
                         Log.d(
                             "CHAT",
-                            "Chat packet received"
+                            "ChatEngine decrypted message: $message"
                         )
 
-
-                        messageReceiver?.invoke(
-                            message
+                        Log.d(
+                            "BT",
+                            "DELIVER ONCE hash=${data.hashCode()}"
                         )
+
+                        Log.d(
+                            "CHAT",
+                            "INVOKING RECEIVER hash=${message.hashCode()}"
+                        )
+
+                        Log.d(
+                            "CHAT",
+                            "BEFORE MESSAGE RECEIVER hash=${message.hashCode()}"
+                        )
+
+                        messageReceiver?.invoke(message)
                     }
-
 
 
                     else -> {
@@ -112,48 +123,7 @@ class ChatEngine(
         }
     }
 
-    private fun handleHandshakeReply(
-        data: ByteArray
-    ) {
 
-        Log.d(
-            "CHAT",
-            "HandshakeReply received"
-        )
-
-        val remoteKey =
-            readPublicKey(data)
-
-
-        if (keyPair == null) {
-
-            Log.e(
-                "CHAT",
-                "No local key pair"
-            )
-
-            return
-        }
-
-
-        sharedSecret =
-            keyExchange.deriveSharedSecret(
-                keyPair!!.privateKey,
-                remoteKey
-            )
-
-
-        sessionKey =
-            Hkdf.deriveKey(
-                sharedSecret!!
-            )
-
-
-        Log.d(
-            "CHAT",
-            "Shared secret created from reply"
-        )
-    }
 
     private fun handleHandshakeInit(
         data: ByteArray
@@ -167,13 +137,23 @@ class ChatEngine(
 
 
         val remoteKey =
-            readPublicKey(
-                data
-            )
+            readPublicKey(data)
+
 
 
         keyPair =
             keyExchange.generateKeyPair()
+
+
+
+        Log.d(
+            "CHAT",
+            "ANDROID LOCAL PUB: ${
+                keyPair!!.publicKey.joinToString("") {
+                    "%02X".format(it)
+                }
+            }"
+        )
 
 
 
@@ -184,10 +164,33 @@ class ChatEngine(
             )
 
 
+
+        Log.d(
+            "CHAT",
+            "ANDROID SHARED RAW: ${
+                sharedSecret!!.joinToString("") {
+                    "%02X".format(it)
+                }
+            }"
+        )
+
+
+
         sessionKey =
             Hkdf.deriveKey(
                 sharedSecret!!
             )
+
+
+
+        Log.d(
+            "CHAT",
+            "ANDROID SESSION KEY: ${
+                sessionKey!!.joinToString("") {
+                    "%02X".format(it)
+                }
+            }"
+        )
 
 
 
@@ -205,23 +208,87 @@ class ChatEngine(
 
 
         transport.send(
-            PacketSerializer.serializeHandshake(
-                reply
-            )
+            PacketSerializer.serializeHandshake(reply)
         )
+
 
 
         Log.d(
             "CHAT",
             "HandshakeReply sent"
         )
+    }
+
+
+
+
+
+    private fun handleHandshakeReply(
+        data: ByteArray
+    ) {
 
 
         Log.d(
             "CHAT",
-            "Shared secret created"
+            "HandshakeReply received"
+        )
+
+
+
+        val remoteKey =
+            readPublicKey(data)
+
+
+
+        if (keyPair == null) {
+
+            Log.e(
+                "CHAT",
+                "Missing local key pair"
+            )
+
+            return
+        }
+
+
+
+        sharedSecret =
+            keyExchange.deriveSharedSecret(
+                keyPair!!.privateKey,
+                remoteKey
+            )
+
+
+
+        Log.d(
+            "CHAT",
+            "ANDROID SHARED RAW: ${
+                sharedSecret!!.joinToString("") {
+                    "%02X".format(it)
+                }
+            }"
+        )
+
+
+
+        sessionKey =
+            Hkdf.deriveKey(
+                sharedSecret!!
+            )
+
+
+
+        Log.d(
+            "CHAT",
+            "ANDROID SESSION KEY: ${
+                sessionKey!!.joinToString("") {
+                    "%02X".format(it)
+                }
+            }"
         )
     }
+
+
 
 
 
@@ -240,21 +307,25 @@ class ChatEngine(
         input.readByte()
 
 
+
         val sizeBytes =
             ByteArray(4)
+
 
         input.readFully(sizeBytes)
 
 
+
         val size =
-            java.nio.ByteBuffer
+            ByteBuffer
                 .wrap(sizeBytes)
-                .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                .order(ByteOrder.LITTLE_ENDIAN)
                 .int
 
 
 
-        if (size < 0 || size > 10000) {
+        if (size <= 0 || size > 10000) {
+
             throw Exception(
                 "Invalid public key size: $size"
             )
@@ -266,11 +337,15 @@ class ChatEngine(
             ByteArray(size)
 
 
+
         input.readFully(key)
+
 
 
         return key
     }
+
+
 
 
 
@@ -285,11 +360,17 @@ class ChatEngine(
 
 
 
+
+
     fun onMessageReceived(
         receiver: (String) -> Unit
     ) {
 
-        messageReceiver =
-            receiver
+        Log.d(
+            "CHAT",
+            "REGISTER RECEIVER"
+        )
+
+        messageReceiver = receiver
     }
 }

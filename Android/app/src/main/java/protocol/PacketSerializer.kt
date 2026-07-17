@@ -5,7 +5,7 @@ import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.util.UUID
-
+import android.util.Log
 
 object PacketSerializer {
 
@@ -74,6 +74,15 @@ object PacketSerializer {
                 ByteArrayInputStream(data)
             )
 
+        Log.d(
+            "SERIALIZER",
+            data.joinToString(
+                prefix = "",
+                separator = " "
+            ) {
+                "%02X".format(it)
+            }
+        )
 
         val packet = MessagePacket()
 

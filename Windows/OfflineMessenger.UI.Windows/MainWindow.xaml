@@ -6,7 +6,14 @@
         xmlns:local="clr-namespace:OfflineMessenger.UI.Windows"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
-    <Grid>
 
+    <Grid>
+        <TextBox
+        x:Name="LogBox"
+        Margin="-163,83,183,-63"
+        AcceptsReturn="True"
+        TextWrapping="Wrap"
+        VerticalScrollBarVisibility="Auto"
+        IsReadOnly="True"/>
     </Grid>
 </Window>

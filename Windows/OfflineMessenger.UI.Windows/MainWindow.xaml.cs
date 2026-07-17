@@ -38,7 +38,11 @@ public partial class MainWindow : Window
         {
             Dispatcher.Invoke(() =>
             {
-                MessageBox.Show(message);
+                if (LogBox != null)
+                {
+                    LogBox.AppendText(message + Environment.NewLine);
+                    LogBox.ScrollToEnd();
+                }
             });
         };
 
@@ -117,7 +121,19 @@ public partial class MainWindow : Window
                 });
             };
 
-            _bluetoothChat.StartHandshake();
+            _bluetoothChat.DebugMessage += message =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (LogBox != null)
+                    {
+                        LogBox.AppendText(message + Environment.NewLine);
+                        LogBox.ScrollToEnd();
+                    }
+                });
+            };
+
+            //_bluetoothChat.StartHandshake();
 
             await _bluetoothChat.WaitForHandshakeAsync();
 
@@ -134,4 +150,6 @@ public partial class MainWindow : Window
 
 
     }
+
+
 }

@@ -6,6 +6,7 @@ import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.KeyAgreement
+import java.security.spec.ECGenParameterSpec
 
 
 class KeyExchangeService {
@@ -21,7 +22,7 @@ class KeyExchangeService {
 
 
         generator.initialize(
-            256
+            ECGenParameterSpec("secp256r1")
         )
 
 

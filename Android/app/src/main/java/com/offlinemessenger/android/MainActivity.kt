@@ -106,7 +106,10 @@ class MainActivity : Activity() {
                     socket!!.outputStream
                 )
 
-
+                Log.d(
+                    "CHAT",
+                    "CREATING CHAT ENGINE ${System.identityHashCode(this)}"
+                )
                 chatEngine = ChatEngine(
                     transport!!
                 )
@@ -116,13 +119,18 @@ class MainActivity : Activity() {
 
                     Log.d(
                         "CHAT",
-                        "Message received: $message"
+                        "CALLBACK INSTANCE hash=${System.identityHashCode(this)}"
+                    )
+
+                    Log.d(
+                        "CHAT",
+                        "UI received message: $message"
                     )
                 }
 
-                chatEngine!!.sendMessage(
+               /** chatEngine!!.sendMessage(
                     "HELLO FROM ANDROID CHAT ENGINE"
-                )
+                ) */
                     //listen(socket!!.inputStream, socket!!.outputStream)
 
             } catch (e: Exception) {

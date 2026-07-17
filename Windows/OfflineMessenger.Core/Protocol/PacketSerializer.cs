@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Buffers.Binary;
 
 namespace OfflineMessenger.Core.Protocol;
 
@@ -11,20 +13,52 @@ public static class PacketSerializer
 
         // 🔹 HEADER
         bw.Write((byte)packet.Type);
-        bw.Write(packet.SessionId.ToByteArray());
-        bw.Write(packet.MessageId.ToByteArray());
-        bw.Write(packet.Timestamp);
+        bw.Write(GuidToBytes(packet.SessionId));
+        bw.Write(GuidToBytes(packet.MessageId));
 
-        // 🔹 Nonce
-        bw.Write(packet.Nonce.Length);
+        var timestamp =
+            new byte[8];
+
+        BinaryPrimitives.WriteInt64BigEndian(
+            timestamp,
+            packet.Timestamp
+        );
+
+        bw.Write(timestamp);
+
+        // Nonce
+        var nonceLength = new byte[4];
+
+        BinaryPrimitives.WriteInt32BigEndian(
+            nonceLength,
+            packet.Nonce.Length
+        );
+
+        bw.Write(nonceLength);
         bw.Write(packet.Nonce);
 
-        // 🔹 Tag
-        bw.Write(packet.Tag.Length);
+
+        // Tag
+        var tagLength = new byte[4];
+
+        BinaryPrimitives.WriteInt32BigEndian(
+            tagLength,
+            packet.Tag.Length
+        );
+
+        bw.Write(tagLength);
         bw.Write(packet.Tag);
 
-        // 🔹 Payload
-        bw.Write(packet.Payload.Length);
+
+        // Payload
+        var payloadLength = new byte[4];
+
+        BinaryPrimitives.WriteInt32BigEndian(
+            payloadLength,
+            packet.Payload.Length
+        );
+
+        bw.Write(payloadLength);
         bw.Write(packet.Payload);
 
         return ms.ToArray();
@@ -39,21 +73,49 @@ public static class PacketSerializer
 
         // 🔹 HEADER
         packet.Type = (MessageType)br.ReadByte();
-        packet.SessionId = new Guid(br.ReadBytes(16));
-        packet.MessageId = new Guid(br.ReadBytes(16));
+        packet.SessionId = BytesToGuid(
+        br.ReadBytes(16)
+            );
+        packet.MessageId =
+            BytesToGuid(
+                br.ReadBytes(16)
+            );
+
+
+        packet.Timestamp =
+            BinaryPrimitives.ReadInt64BigEndian(
+                br.ReadBytes(8)
+            );
         packet.Timestamp = br.ReadInt64();
 
         // 🔹 Nonce
-        int nonceLen = br.ReadInt32();
-        packet.Nonce = br.ReadBytes(nonceLen);
+        int nonceLen =
+            BinaryPrimitives.ReadInt32BigEndian(
+                br.ReadBytes(4)
+            );
+
+        packet.Nonce =
+            br.ReadBytes(nonceLen);
+
 
         // 🔹 Tag
-        int tagLen = br.ReadInt32();
-        packet.Tag = br.ReadBytes(tagLen);
+        int tagLen =
+            BinaryPrimitives.ReadInt32BigEndian(
+                br.ReadBytes(4)
+            );
+
+        packet.Tag =
+            br.ReadBytes(tagLen);
+
 
         // 🔹 Payload
-        int payloadLen = br.ReadInt32();
-        packet.Payload = br.ReadBytes(payloadLen);
+        int payloadLen =
+            BinaryPrimitives.ReadInt32BigEndian(
+                br.ReadBytes(4)
+            );
+
+        packet.Payload =
+            br.ReadBytes(payloadLen);
 
         return packet;
     }
@@ -84,5 +146,27 @@ public static class PacketSerializer
         packet.PublicKey = br.ReadBytes(len);
 
         return packet;
+    }
+
+    private static byte[] GuidToBytes(Guid guid)
+    {
+        var result = new byte[16];
+
+        var bytes = guid.ToByteArray();
+
+        Buffer.BlockCopy(
+            bytes,
+            0,
+            result,
+            0,
+            16
+        );
+
+        return result;
+    }
+
+    private static Guid BytesToGuid(byte[] bytes)
+    {
+        return new Guid(bytes);
     }
 }

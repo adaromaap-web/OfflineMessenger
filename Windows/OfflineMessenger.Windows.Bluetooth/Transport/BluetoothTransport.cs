@@ -49,22 +49,43 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
 
         public async Task SendAsync(byte[] data)
         {
-            // 4 байта длины
-            var length =
-                new byte[4];
-
+            var size = new byte[4];
 
             BinaryPrimitives.WriteInt32BigEndian(
-                length,
+                size,
                 data.Length
             );
 
 
-            await bluetooth.SendAsync(length);
+            var framed =
+                new byte[4 + data.Length];
 
-            await bluetooth.SendAsync(data);
+
+            Array.Copy(
+                size,
+                0,
+                framed,
+                0,
+                4
+            );
+
+
+            Array.Copy(
+                data,
+                0,
+                framed,
+                4,
+                data.Length
+            );
+
+
+            DebugMessage?.Invoke(
+                $"Windows sending framed packet {framed.Length} bytes"
+            );
+
+
+            await bluetooth.SendAsync(framed);
         }
-
 
 
         private async Task ReceiveLoop()
@@ -73,37 +94,6 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
             {
                 while (true)
                 {
-                    // сначала читаем длину
-                    var lengthBytes =
-                        await bluetooth.ReceiveAsync();
-
-
-                    if (lengthBytes == null)
-                    {
-                        break;
-                    }
-
-
-                    if (lengthBytes.Length != 4)
-                    {
-                        continue;
-                    }
-
-
-                    int size =
-                        BinaryPrimitives.ReadInt32BigEndian(
-                            lengthBytes
-                        );
-
-
-                    if (size <= 0 || size > 10_000_000)
-                    {
-                        continue;
-                    }
-
-
-
-                    // потом читаем сам пакет
                     var data =
                         await bluetooth.ReceiveAsync();
 
@@ -113,20 +103,61 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
                         break;
                     }
 
-                    MessageBox.Show(
-    $"Windows received bytes: {data.Length}"
-);
 
-                    DataReceived?.Invoke(data);
+                    if (data.Length < 4)
+                    {
+                        continue;
+                    }
 
 
+                    int size =
+                        BinaryPrimitives.ReadInt32BigEndian(
+                            data.AsSpan(0, 4)
+                        );
+
+
+                    if (size <= 0 || size > 10_000_000)
+                    {
+                        continue;
+                    }
+
+
+                    if (data.Length - 4 != size)
+                    {
+                        DebugMessage?.Invoke(
+                            $"Invalid packet size. Expected {size}, received {data.Length - 4}"
+                        );
+
+                        continue;
+                    }
+
+
+                    var packet =
+                        new byte[size];
+
+
+                    Array.Copy(
+                        data,
+                        4,
+                        packet,
+                        0,
+                        size
+                    );
+
+
+                    DebugMessage?.Invoke(
+                        $"Windows received packet {packet.Length} bytes"
+                    );
+
+
+                    DataReceived?.Invoke(packet);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    "Bluetooth receive error: "
-                    + ex.Message);
+                DebugMessage?.Invoke(
+                    "Bluetooth receive error: " + ex.Message
+                );
             }
         }
     }
