@@ -245,4 +245,35 @@ object PacketSerializer {
 
         return output.toByteArray()
     }
+
+    fun serializeAck(
+        packet: AckPacket
+    ): ByteArray {
+
+        val output =
+            ByteArrayOutputStream()
+
+        val writer =
+            DataOutputStream(output)
+
+
+        writer.writeByte(4)
+
+        writer.write(
+            uuidToBytes(packet.sessionId)
+        )
+
+        writer.write(
+            uuidToBytes(packet.messageId)
+        )
+
+        writer.writeBoolean(
+            packet.received
+        )
+
+
+        writer.flush()
+
+        return output.toByteArray()
+    }
 }

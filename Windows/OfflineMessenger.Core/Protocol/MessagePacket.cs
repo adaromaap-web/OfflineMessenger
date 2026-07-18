@@ -15,6 +15,10 @@ public class MessagePacket
 
     public byte[] Payload { get; set; }
 
+    public MessageStatus Status { get; set; }
+
+    public MessageDirection Direction { get; set; }
+
     // 🔐 ДОБАВЛЯЕМ
     public byte[] Nonce { get; set; }
     public byte[] Tag { get; set; }

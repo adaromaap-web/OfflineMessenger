@@ -86,7 +86,7 @@ public static class PacketSerializer
             BinaryPrimitives.ReadInt64BigEndian(
                 br.ReadBytes(8)
             );
-        packet.Timestamp = br.ReadInt64();
+        //packet.Timestamp = br.ReadInt64();
 
         // 🔹 Nonce
         int nonceLen =
@@ -116,6 +116,49 @@ public static class PacketSerializer
 
         packet.Payload =
             br.ReadBytes(payloadLen);
+
+        return packet;
+    }
+
+    public static byte[] SerializeAck(AckPacket packet)
+    {
+        using var ms = new MemoryStream();
+        using var bw = new BinaryWriter(ms);
+
+        bw.Write((byte)MessageType.Ack);
+
+        bw.Write(GuidToBytes(packet.SessionId));
+
+        bw.Write(GuidToBytes(packet.MessageId));
+
+        bw.Write(packet.Received);
+
+        return ms.ToArray();
+    }
+
+
+    public static AckPacket DeserializeAck(byte[] data)
+    {
+        using var ms = new MemoryStream(data);
+        using var br = new BinaryReader(ms);
+
+        // type
+        br.ReadByte();
+
+        var packet = new AckPacket();
+
+        packet.SessionId =
+            BytesToGuid(
+                br.ReadBytes(16)
+            );
+
+        packet.MessageId =
+            BytesToGuid(
+                br.ReadBytes(16)
+            );
+
+        packet.Received =
+            br.ReadBoolean();
 
         return packet;
     }

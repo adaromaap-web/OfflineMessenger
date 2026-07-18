@@ -13,6 +13,8 @@ import java.io.ByteArrayInputStream
 import java.io.DataInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.UUID
+import com.offlinemessenger.android.protocol.AckPacket
 
 class ChatEngine(
     private val transport: ITransport
@@ -82,6 +84,11 @@ class ChatEngine(
                         Log.d(
                             "CHAT",
                             "ChatEngine decrypted message: $message"
+                        )
+
+                        sendAck(
+                            packet.sessionId,
+                            packet.messageId
                         )
 
                         Log.d(
@@ -372,5 +379,29 @@ class ChatEngine(
         )
 
         messageReceiver = receiver
+    }
+
+    private fun sendAck(
+        sessionId: UUID,
+        messageId: UUID
+    ) {
+
+        val ack =
+            AckPacket(
+                sessionId = sessionId,
+                messageId = messageId,
+                received = true
+            )
+
+
+        transport.send(
+            PacketSerializer.serializeAck(ack)
+        )
+
+
+        Log.d(
+            "CHAT",
+            "ACK sent: $messageId"
+        )
     }
 }

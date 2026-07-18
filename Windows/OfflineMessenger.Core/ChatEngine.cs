@@ -4,6 +4,7 @@ using OfflineMessenger.Transport.Abstractions;
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using OfflineMessenger.Core.Messaging;
 
 namespace OfflineMessenger.Core;
 
@@ -30,6 +31,10 @@ public class ChatEngine
     private bool _isInitiator = false;
 
     private bool _handshakeStarted = false;
+
+    private readonly MessageService _messageService = new();
+
+    private readonly Dictionary<Guid, string> _pendingMessages = new();
 
 
     public ChatEngine(ITransport transport, ICryptoService crypto)
@@ -88,17 +93,15 @@ public class ChatEngine
         );
 
 
-        var packet = new MessagePacket
-        {
-            Type = MessageType.Chat,
-            SessionId = _sessionId,
-            MessageId = Guid.NewGuid(),
-            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            Payload = encrypted,
-            Nonce = nonce,
-            Tag = tag
-        };
+        var packet = _messageService.CreateOutgoingMessage(
+            message,
+            encrypted,
+            nonce,
+            tag,
+            _sessionId
+        );
 
+        _pendingMessages[packet.MessageId] = message;
 
         return _transport.SendAsync(
             PacketSerializer.Serialize(packet)
@@ -117,6 +120,10 @@ public class ChatEngine
 
 
         var type = (MessageType)data[0];
+
+        DebugMessage?.Invoke(
+    $"RECEIVED PACKET TYPE: {type}"
+);
 
 
         // HANDSHAKE INIT
@@ -172,7 +179,32 @@ public class ChatEngine
             return;
         }
 
+        // ---------------- ACK ----------------
+        if (type == MessageType.Ack)
+        {
+            var ack = PacketSerializer.DeserializeAck(data);
 
+            DebugMessage?.Invoke(
+                $"ACK RECEIVED: {ack.MessageId}"
+            );
+
+
+            if (_pendingMessages.TryGetValue(
+        ack.MessageId,
+        out var deliveredMessage))
+            {
+                DebugMessage?.Invoke(
+                    $"DELIVERED: {deliveredMessage}"
+                );
+
+                _pendingMessages.Remove(
+                    ack.MessageId
+                );
+            }
+
+
+            return;
+        }
 
         // CHAT
         if (!_handshakeCompleted)
@@ -196,8 +228,9 @@ public class ChatEngine
             );
 
 
-        var message =
-            Encoding.UTF8.GetString(decrypted);
+        //var message = Encoding.UTF8.GetString(decrypted);
+
+        var message = _messageService.DecodeIncomingMessage(decrypted);
 
 
         MessageReceived?.Invoke(message);

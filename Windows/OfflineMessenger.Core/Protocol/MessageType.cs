@@ -10,5 +10,6 @@ public enum MessageType
 {
     HandshakeInit = 1,
     HandshakeReply = 2,
-    Chat = 3
+    Chat = 3,
+    Ack = 4
 }
