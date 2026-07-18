@@ -106,6 +106,11 @@ class ChatEngine(
                             "BEFORE MESSAGE RECEIVER hash=${message.hashCode()}"
                         )
 
+                        Log.d(
+                            "CHAT",
+                            "BEFORE UI CALLBACK: $message"
+                        )
+
                         messageReceiver?.invoke(message)
                     }
 

@@ -5,6 +5,8 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using OfflineMessenger.Core.Messaging;
+using OfflineMessenger.Core.Protocol;
+using OfflineMessenger.Core.Messaging;
 
 namespace OfflineMessenger.Core;
 
@@ -12,6 +14,7 @@ public class ChatEngine
 {
     private readonly ITransport _transport;
     private readonly KeyExchangeService _keyExchange = new();
+    private readonly MessageStore _messageStore = new();
 
     private KeyPair _keyPair;
     private byte[] _remotePublicKey;
@@ -34,7 +37,6 @@ public class ChatEngine
 
     private readonly MessageService _messageService = new();
 
-    private readonly Dictionary<Guid, string> _pendingMessages = new();
 
 
     public ChatEngine(ITransport transport, ICryptoService crypto)
@@ -101,7 +103,13 @@ public class ChatEngine
             _sessionId
         );
 
-        _pendingMessages[packet.MessageId] = message;
+        packet.Status = MessageStatus.Sent;
+
+        _messageStore.Add(packet);
+
+        DebugMessage?.Invoke(
+    $"INCOMING STORED: {packet.MessageId}"
+);
 
         return _transport.SendAsync(
             PacketSerializer.Serialize(packet)
@@ -188,20 +196,28 @@ public class ChatEngine
                 $"ACK RECEIVED: {ack.MessageId}"
             );
 
+            if (_messageStore.TryGet(
+                ack.MessageId,
+                out var storedMessage))
+                    {
+                        _messageStore.UpdateStatus(
+                            ack.MessageId,
+                            MessageStatus.Delivered
+                        );
 
-            if (_pendingMessages.TryGetValue(
-        ack.MessageId,
-        out var deliveredMessage))
-            {
-                DebugMessage?.Invoke(
-                    $"DELIVERED: {deliveredMessage}"
-                );
+                        _messageStore.TryGet(
+                            ack.MessageId,
+                            out var updatedMessage
+                        );
 
-                _pendingMessages.Remove(
-                    ack.MessageId
-                );
-            }
+                        DebugMessage?.Invoke(
+                            $"DELIVERED: {ack.MessageId}"
+                        );
 
+                        DebugMessage?.Invoke(
+                            $"STATUS CHECK: {updatedMessage.Status}"
+                        );
+                    }
 
             return;
         }
