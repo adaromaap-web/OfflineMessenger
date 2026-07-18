@@ -1,10 +1,9 @@
-﻿using OfflineMessenger.Core;
+﻿using OfflineMessenger.Bluetooth.Windows.Transport;
+using OfflineMessenger.Core;
 using OfflineMessenger.Crypto;
-using OfflineMessenger.Transport.Memory;
-using OfflineMessenger.Bluetooth.Windows.Transport;
-
 using System;
 using System.Windows;
+using System.Windows.Controls;
 
 
 namespace OfflineMessenger.UI.Windows;
@@ -16,73 +15,29 @@ public partial class MainWindow : Window
 
     private ChatEngine? _bluetoothChat;
 
+    private readonly Dictionary<Guid, TextBlock> _messageControls = new();
 
-    // Старый тестовый режим оставляем
-    private readonly ChatEngine _chatA;
-    private readonly ChatEngine _chatB;
-
-
+    private readonly Dictionary<Guid, ChatItem> _uiMessages = new();
 
     public MainWindow()
     {
         InitializeComponent();
 
 
-        // =========================
-        // REAL BLUETOOTH TRANSPORT
-        // =========================
+        SendButton.Click += SendButton_Click;
+
 
         _bluetoothTransport = new BluetoothTransport();
+
 
         _bluetoothTransport.DebugMessage += message =>
         {
             Dispatcher.Invoke(() =>
             {
-                if (LogBox != null)
-                {
-                    LogBox.AppendText(message + Environment.NewLine);
-                    LogBox.ScrollToEnd();
-                }
-            });
-        };
+                LogBox.AppendText(
+                    message + Environment.NewLine);
 
-        // =========================
-        // SIMULATED DEVICES TEST
-        // =========================
-
-        var transportA = new InMemoryTransport();
-        var transportB = new InMemoryTransport();
-
-        transportA.ConnectTo(transportB);
-
-
-        _chatA = new ChatEngine(
-            transportA,
-            new CryptoService());
-
-
-        _chatB = new ChatEngine(
-            transportB,
-            new CryptoService());
-
-
-
-        _chatA.MessageReceived += msg =>
-        {
-            Dispatcher.Invoke(() =>
-            {
-                MessageBox.Show(
-                    "A received: " + msg);
-            });
-        };
-
-
-        _chatB.MessageReceived += msg =>
-        {
-            Dispatcher.Invoke(() =>
-            {
-                MessageBox.Show(
-                    "B received: " + msg);
+                LogBox.ScrollToEnd();
             });
         };
 
@@ -98,58 +53,126 @@ public partial class MainWindow : Window
     {
         try
         {
-            // Сначала реальный Bluetooth
             await _bluetoothTransport.ConnectAsync("");
 
 
-            MessageBox.Show(
-                "Bluetooth connected");
+            LogBox.AppendText(
+                "Bluetooth connected" +
+                Environment.NewLine);
 
 
-
-            // Только после подключения создаём ChatEngine
 
             _bluetoothChat = new ChatEngine(
-            _bluetoothTransport,
-            new CryptoService());
+                _bluetoothTransport,
+                new CryptoService());
+
+            _bluetoothChat.MessageStatusChanged += (id, status) =>
+            {
+
+
+                Dispatcher.Invoke(() =>
+                {
+                    if (_uiMessages.TryGetValue(
+                            id,
+                            out var item))
+                    {
+                        item.Status = "✓ Delivered";
+
+                        LogBox.ScrollToEnd();
+
+                    }
+                });
+            };
+
 
             _bluetoothChat.StatusChanged += status =>
             {
                 Dispatcher.Invoke(() =>
                 {
-                    MessageBox.Show(status);
+                    LogBox.AppendText(
+                        status + Environment.NewLine);
+
+                    LogBox.ScrollToEnd();
                 });
             };
+
+
 
             _bluetoothChat.DebugMessage += message =>
             {
                 Dispatcher.Invoke(() =>
                 {
-                    if (LogBox != null)
-                    {
-                        LogBox.AppendText(message + Environment.NewLine);
-                        LogBox.ScrollToEnd();
-                    }
+                    LogBox.AppendText(
+                        message + Environment.NewLine);
+
+                    LogBox.ScrollToEnd();
                 });
             };
 
-            //_bluetoothChat.StartHandshake();
+
+
+            _bluetoothChat.MessageReceived += message =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    ChatList.Items.Add(
+                        $"Android: {message}"
+                    );
+                });
+            };
+
 
             await _bluetoothChat.WaitForHandshakeAsync();
 
-            await _bluetoothChat.SendMessageAsync(
-                "HELLO FROM UI WINDOWS");
 
-           
+
+            LogBox.AppendText(
+                "Handshake completed" +
+                Environment.NewLine);
+
         }
         catch (Exception ex)
         {
             MessageBox.Show(
                 "Bluetooth error: " + ex.Message);
         }
-
-
     }
 
 
+
+    private async void SendButton_Click(
+    object sender,
+    RoutedEventArgs e)
+    {
+        if (_bluetoothChat == null)
+            return;
+
+
+        var text = MessageInput.Text;
+
+
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+
+        var messageId =
+            await _bluetoothChat.SendMessageAsync(text);
+
+
+        var item = new ChatItem
+        {
+            Id = messageId,
+            Text = text,
+            Status = "⏳ Sending"
+        };
+
+
+        _uiMessages[messageId] = item;
+
+
+        ChatList.Items.Add(item);
+
+
+        MessageInput.Clear();
+    }
 }

@@ -28,6 +28,8 @@ public class ChatEngine
 
     public event Action<string>? DebugMessage;
 
+    public event Action<Guid, MessageStatus>? MessageStatusChanged;
+
     public event Action<string> StatusChanged;
 
     private bool _handshakeCompleted = false;
@@ -36,6 +38,8 @@ public class ChatEngine
     private bool _handshakeStarted = false;
 
     private readonly MessageService _messageService = new();
+
+    
 
 
 
@@ -76,7 +80,7 @@ public class ChatEngine
     // =========================
     // SEND MESSAGE
     // =========================
-    public Task SendMessageAsync(string message)
+    public async Task<Guid> SendMessageAsync(string message)
     {
         if (!_handshakeCompleted)
             throw new InvalidOperationException(
@@ -103,17 +107,14 @@ public class ChatEngine
             _sessionId
         );
 
-        packet.Status = MessageStatus.Sent;
-
         _messageStore.Add(packet);
 
-        DebugMessage?.Invoke(
-    $"INCOMING STORED: {packet.MessageId}"
-);
-
-        return _transport.SendAsync(
+        await _transport.SendAsync(
             PacketSerializer.Serialize(packet)
         );
+
+
+        return packet.MessageId;
     }
 
 
@@ -205,7 +206,12 @@ public class ChatEngine
                             MessageStatus.Delivered
                         );
 
-                        _messageStore.TryGet(
+                        MessageStatusChanged?.Invoke(
+                            ack.MessageId,
+                            MessageStatus.Delivered
+                            );
+
+                _messageStore.TryGet(
                             ack.MessageId,
                             out var updatedMessage
                         );
