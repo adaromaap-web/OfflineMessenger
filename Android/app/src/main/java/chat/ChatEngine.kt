@@ -15,6 +15,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
 import com.offlinemessenger.android.protocol.AckPacket
+import com.offlinemessenger.android.protocol.MessagePacket
 
 class ChatEngine(
     private val transport: ITransport
@@ -29,6 +30,10 @@ class ChatEngine(
     private var sessionKey: ByteArray? = null
 
     private var messageReceiver: ((String) -> Unit)? = null
+
+    private var handshakeCompleted = false
+
+    private var handshakeListener: (() -> Unit)? = null
 
 
     init {
@@ -141,7 +146,6 @@ class ChatEngine(
         data: ByteArray
     ) {
 
-
         Log.d(
             "CHAT",
             "HandshakeInit received"
@@ -152,10 +156,8 @@ class ChatEngine(
             readPublicKey(data)
 
 
-
         keyPair =
             keyExchange.generateKeyPair()
-
 
 
         Log.d(
@@ -168,13 +170,11 @@ class ChatEngine(
         )
 
 
-
         sharedSecret =
             keyExchange.deriveSharedSecret(
                 keyPair!!.privateKey,
                 remoteKey
             )
-
 
 
         Log.d(
@@ -187,12 +187,10 @@ class ChatEngine(
         )
 
 
-
         sessionKey =
             Hkdf.deriveKey(
                 sharedSecret!!
             )
-
 
 
         Log.d(
@@ -203,7 +201,6 @@ class ChatEngine(
                 }
             }"
         )
-
 
 
         val reply =
@@ -218,11 +215,9 @@ class ChatEngine(
             keyPair!!.publicKey
 
 
-
         transport.send(
             PacketSerializer.serializeHandshake(reply)
         )
-
 
 
         Log.d(
@@ -288,7 +283,8 @@ class ChatEngine(
                 sharedSecret!!
             )
 
-
+        handshakeCompleted = true
+        handshakeListener?.invoke()
 
         Log.d(
             "CHAT",
@@ -365,8 +361,65 @@ class ChatEngine(
         message: String
     ) {
 
+        if (sessionKey == null) {
+
+            Log.e(
+                "CHAT",
+                "Cannot send message: no session key"
+            )
+
+            return
+        }
+
+
+        val encrypted =
+            CryptoService().encrypt(
+                sessionKey!!,
+                message.toByteArray()
+            )
+
+
+        val packet =
+            MessagePacket()
+
+
+        packet.type =
+            MessageType.Chat
+
+
+        packet.sessionId =
+            UUID.randomUUID()
+
+
+        packet.messageId =
+            UUID.randomUUID()
+
+
+        packet.timestamp =
+            System.currentTimeMillis() / 1000
+
+
+        packet.payload =
+            encrypted.payload
+
+
+        packet.nonce =
+            encrypted.nonce
+
+
+        packet.tag =
+            encrypted.tag
+
+
+
         transport.send(
-            message.toByteArray()
+            PacketSerializer.serialize(packet)
+        )
+
+
+        Log.d(
+            "CHAT",
+            "MESSAGE SENT: ${packet.messageId}"
         )
     }
 
@@ -408,5 +461,11 @@ class ChatEngine(
             "CHAT",
             "ACK sent: $messageId"
         )
+    }
+
+    fun onHandshakeCompleted(
+        listener: () -> Unit
+    ) {
+        handshakeListener = listener
     }
 }

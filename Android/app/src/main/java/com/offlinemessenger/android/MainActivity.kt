@@ -18,7 +18,16 @@ import android.os.Build
 import android.widget.Toast
 import android.app.Activity
 import com.offlinemessenger.android.chat.ChatEngine
+import android.widget.ArrayAdapter
 class MainActivity : Activity() {
+
+    private lateinit var chatList: android.widget.ListView
+    private lateinit var messageInput: android.widget.EditText
+    private lateinit var sendButton: android.widget.Button
+
+    private lateinit var adapter: android.widget.ArrayAdapter<String>
+
+    private val messages = mutableListOf<String>()
 
     private fun hasBluetoothPermission(): Boolean {
         return ActivityCompat.checkSelfPermission(
@@ -50,6 +59,20 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        setContentView(R.layout.activity_main)
+
+        chatList = findViewById(R.id.chatList)
+        messageInput = findViewById(R.id.messageInput)
+        sendButton = findViewById(R.id.sendButton)
+
+        adapter = android.widget.ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            messages
+        )
+
+        chatList.adapter = adapter
 
         if (!hasBluetoothPermission()) {
             requestBluetoothPermission()
@@ -114,23 +137,30 @@ class MainActivity : Activity() {
                     transport!!
                 )
 
+                chatEngine!!.onHandshakeCompleted {
+
+                    Log.d(
+                        "CHAT",
+                        "HANDSHAKE READY"
+                    )
+                }
 
                 chatEngine!!.onMessageReceived { message ->
 
                     Log.d(
                         "CHAT",
-                        "CALLBACK INSTANCE hash=${System.identityHashCode(this)}"
-                    )
-
-                    Log.d(
-                        "CHAT",
                         "UI received message: $message"
                     )
+
+                    runOnUiThread {
+
+                        messages.add(message)
+
+                        this@MainActivity.adapter.notifyDataSetChanged()
+                    }
                 }
 
-               /** chatEngine!!.sendMessage(
-                    "HELLO FROM ANDROID CHAT ENGINE"
-                ) */
+
                     //listen(socket!!.inputStream, socket!!.outputStream)
 
             } catch (e: Exception) {

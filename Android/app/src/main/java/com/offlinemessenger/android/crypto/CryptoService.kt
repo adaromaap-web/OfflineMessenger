@@ -3,6 +3,7 @@ package com.offlinemessenger.android.crypto
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import java.security.SecureRandom
 
 
 class CryptoService {
@@ -71,4 +72,75 @@ class CryptoService {
             combined
         )
     }
+
+    fun encrypt(
+        key: ByteArray,
+        data: ByteArray
+    ): EncryptedData {
+
+        val nonce = ByteArray(12)
+
+        SecureRandom().nextBytes(nonce)
+
+
+        val cipher =
+            Cipher.getInstance(
+                "AES/GCM/NoPadding"
+            )
+
+
+        val secretKey =
+            SecretKeySpec(
+                key,
+                "AES"
+            )
+
+
+        val spec =
+            GCMParameterSpec(
+                128,
+                nonce
+            )
+
+
+        cipher.init(
+            Cipher.ENCRYPT_MODE,
+            secretKey,
+            spec
+        )
+
+
+        val encrypted =
+            cipher.doFinal(data)
+
+
+        val tagSize = 16
+
+
+        val payload =
+            encrypted.copyOfRange(
+                0,
+                encrypted.size - tagSize
+            )
+
+
+        val tag =
+            encrypted.copyOfRange(
+                encrypted.size - tagSize,
+                encrypted.size
+            )
+
+
+        return EncryptedData(
+            payload = payload,
+            nonce = nonce,
+            tag = tag
+        )
+    }
 }
+
+data class EncryptedData(
+    val payload: ByteArray,
+    val nonce: ByteArray,
+    val tag: ByteArray
+)
