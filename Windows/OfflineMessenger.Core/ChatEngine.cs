@@ -1,12 +1,13 @@
-﻿using OfflineMessenger.Core.Protocol;
+﻿using OfflineMessenger.Core.Messaging;
+using OfflineMessenger.Core.Messaging;
+using OfflineMessenger.Core.Protocol;
+using OfflineMessenger.Core.Protocol;
 using OfflineMessenger.Crypto;
 using OfflineMessenger.Transport.Abstractions;
 using System;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
-using OfflineMessenger.Core.Messaging;
-using OfflineMessenger.Core.Protocol;
-using OfflineMessenger.Core.Messaging;
 
 namespace OfflineMessenger.Core;
 
@@ -24,7 +25,8 @@ public class ChatEngine
 
     private readonly Guid _sessionId = Guid.NewGuid();
 
-    public event Action<string> MessageReceived;
+    public event Action<string>? MessageReceived;
+
 
     public event Action<string>? DebugMessage;
 
@@ -250,12 +252,13 @@ public class ChatEngine
             );
 
 
-        //var message = Encoding.UTF8.GetString(decrypted);
+        var message =
+            Encoding.UTF8.GetString(decrypted);
 
-        var message = _messageService.DecodeIncomingMessage(decrypted);
+        MessageReceived?.Invoke(
+    message
+);
 
-
-        MessageReceived?.Invoke(message);
     }
 
 

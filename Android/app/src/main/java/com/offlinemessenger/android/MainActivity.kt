@@ -137,6 +137,22 @@ class MainActivity : Activity() {
                     transport!!
                 )
 
+                sendButton.setOnClickListener {
+
+                    val text = messageInput.text.toString()
+
+                    if (text.isNotBlank()) {
+
+                        chatEngine?.sendMessage(text)
+
+                        this@MainActivity.adapter.add(
+                            "Me: $text"
+                        )
+
+                        messageInput.text.clear()
+                    }
+                }
+
                 chatEngine!!.onHandshakeCompleted {
 
                     Log.d(

@@ -2,6 +2,7 @@
 using OfflineMessenger.Core;
 using OfflineMessenger.Crypto;
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -15,9 +16,8 @@ public partial class MainWindow : Window
 
     private ChatEngine? _bluetoothChat;
 
-    private readonly Dictionary<Guid, TextBlock> _messageControls = new();
-
     private readonly Dictionary<Guid, ChatItem> _uiMessages = new();
+
 
     public MainWindow()
     {
@@ -64,12 +64,13 @@ public partial class MainWindow : Window
 
             _bluetoothChat = new ChatEngine(
                 _bluetoothTransport,
-                new CryptoService());
+                new CryptoService()
+            );
+
+
 
             _bluetoothChat.MessageStatusChanged += (id, status) =>
             {
-
-
                 Dispatcher.Invoke(() =>
                 {
                     if (_uiMessages.TryGetValue(
@@ -79,10 +80,10 @@ public partial class MainWindow : Window
                         item.Status = "✓ Delivered";
 
                         LogBox.ScrollToEnd();
-
                     }
                 });
             };
+
 
 
             _bluetoothChat.StatusChanged += status =>
@@ -122,6 +123,7 @@ public partial class MainWindow : Window
             };
 
 
+
             await _bluetoothChat.WaitForHandshakeAsync();
 
 
@@ -141,8 +143,8 @@ public partial class MainWindow : Window
 
 
     private async void SendButton_Click(
-    object sender,
-    RoutedEventArgs e)
+        object sender,
+        RoutedEventArgs e)
     {
         if (_bluetoothChat == null)
             return;
@@ -155,8 +157,10 @@ public partial class MainWindow : Window
             return;
 
 
+
         var messageId =
             await _bluetoothChat.SendMessageAsync(text);
+
 
 
         var item = new ChatItem
@@ -167,10 +171,13 @@ public partial class MainWindow : Window
         };
 
 
+
         _uiMessages[messageId] = item;
 
 
+
         ChatList.Items.Add(item);
+
 
 
         MessageInput.Clear();
