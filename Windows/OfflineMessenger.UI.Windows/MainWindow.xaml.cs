@@ -3,6 +3,7 @@ using OfflineMessenger.Core;
 using OfflineMessenger.Crypto;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -117,11 +118,15 @@ public partial class MainWindow : Window
                 Dispatcher.Invoke(() =>
                 {
                     ChatList.Items.Add(
-                        $"Android: {message}"
+                        new ChatItem
+                        {
+                            Id = Guid.NewGuid(),
+                            Text = message,
+                            Status = "✓ Delivered"
+                        }
                     );
                 });
             };
-
 
 
             await _bluetoothChat.WaitForHandshakeAsync();

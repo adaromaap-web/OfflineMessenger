@@ -14,6 +14,7 @@ public class ChatItem : INotifyPropertyChanged
 
     private string _status = "";
 
+
     public string Status
     {
         get => _status;
@@ -26,6 +27,10 @@ public class ChatItem : INotifyPropertyChanged
         }
     }
 
+    public override string ToString()
+    {
+        return $"{Text} {Status}";
+    }
 
     public string DisplayText =>
         $"You: {Text}   {Status}";

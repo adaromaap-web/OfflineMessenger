@@ -242,6 +242,9 @@ public class ChatEngine
         if (chatPacket.Type != MessageType.Chat)
             return;
 
+        DebugMessage?.Invoke(
+    $"CHAT PACKET: payload={chatPacket.Payload.Length}, nonce={chatPacket.Nonce.Length}, tag={chatPacket.Tag.Length}"
+);
 
         var decrypted =
             new CryptoService().Decrypt(
@@ -251,14 +254,26 @@ public class ChatEngine
                 chatPacket.Tag
             );
 
+        DebugMessage?.Invoke(
+    $"DECRYPT OK: bytes={decrypted.Length}"
+);
+
 
         var message =
             Encoding.UTF8.GetString(decrypted);
+
+        DebugMessage?.Invoke(
+    $"MESSAGE BEFORE EVENT: [{message}] LENGTH={message.Length}"
+);
 
         MessageReceived?.Invoke(
     message
 );
 
+
+        DebugMessage?.Invoke(
+    $"EVENT HAS SUBSCRIBERS: {MessageReceived != null}"
+);
     }
 
 
