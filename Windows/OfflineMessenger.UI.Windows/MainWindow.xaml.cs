@@ -3,8 +3,8 @@ using OfflineMessenger.Core;
 using OfflineMessenger.Crypto;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Controls;
 
 
 namespace OfflineMessenger.UI.Windows;
@@ -30,18 +30,6 @@ public partial class MainWindow : Window
         _bluetoothTransport = new BluetoothTransport();
 
 
-        _bluetoothTransport.DebugMessage += message =>
-        {
-            Dispatcher.Invoke(() =>
-            {
-                LogBox.AppendText(
-                    message + Environment.NewLine);
-
-                LogBox.ScrollToEnd();
-            });
-        };
-
-
         Loaded += MainWindow_Loaded;
     }
 
@@ -56,10 +44,9 @@ public partial class MainWindow : Window
             await _bluetoothTransport.ConnectAsync("");
 
 
-            LogBox.AppendText(
-                "Bluetooth connected" +
-                Environment.NewLine);
-
+            Debug.WriteLine(
+                "Bluetooth connected"
+            );
 
 
             _bluetoothChat = new ChatEngine(
@@ -78,8 +65,6 @@ public partial class MainWindow : Window
                             out var item))
                     {
                         item.Status = "✓ Delivered";
-
-                        LogBox.ScrollToEnd();
                     }
                 });
             };
@@ -88,26 +73,18 @@ public partial class MainWindow : Window
 
             _bluetoothChat.StatusChanged += status =>
             {
-                Dispatcher.Invoke(() =>
-                {
-                    LogBox.AppendText(
-                        status + Environment.NewLine);
-
-                    LogBox.ScrollToEnd();
-                });
+                Debug.WriteLine(
+                    $"STATUS: {status}"
+                );
             };
 
 
 
             _bluetoothChat.DebugMessage += message =>
             {
-                Dispatcher.Invoke(() =>
-                {
-                    LogBox.AppendText(
-                        message + Environment.NewLine);
-
-                    LogBox.ScrollToEnd();
-                });
+                Debug.WriteLine(
+                    message
+                );
             };
 
 
@@ -116,15 +93,15 @@ public partial class MainWindow : Window
             {
                 Dispatcher.Invoke(() =>
                 {
-                    ChatList.Items.Add(
-                        new ChatItem
-                        {
-                            Id = Guid.NewGuid(),
-                            Text = message,
-                            Status = "Delivered",
-                            IsMine = false
-                        }
-                    );
+                    var item = new ChatItem
+                    {
+                        Id = Guid.NewGuid(),
+                        Text = message,
+                        Status = "✓ Delivered",
+                        IsMine = false
+                    };
+
+                    ChatList.Items.Add(item);
                 });
             };
 
@@ -133,16 +110,16 @@ public partial class MainWindow : Window
             await _bluetoothChat.WaitForHandshakeAsync();
 
 
-
-            LogBox.AppendText(
-                "Handshake completed" +
-                Environment.NewLine);
+            Debug.WriteLine(
+                "Handshake completed"
+            );
 
         }
         catch (Exception ex)
         {
-            LogBox.AppendText(
-                ex.ToString() + Environment.NewLine);
+            Debug.WriteLine(
+                ex.ToString()
+            );
         }
     }
 
@@ -182,9 +159,7 @@ public partial class MainWindow : Window
         _uiMessages[messageId] = item;
 
 
-
         ChatList.Items.Add(item);
-
 
 
         MessageInput.Clear();
