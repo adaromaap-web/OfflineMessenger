@@ -40,6 +40,10 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
 
         public async Task ConnectAsync(DeviceInformation device)
         {
+            DebugMessage?.Invoke(
+    $"RFCOMM TRY: {device.Id}"
+);      
+
             var service =
                 await RfcommDeviceService.FromIdAsync(device.Id);
 
@@ -49,6 +53,10 @@ namespace OfflineMessenger.Bluetooth.Windows.Transport
                 throw new Exception(
                     "RFCOMM service not found");
             }
+
+            DebugMessage?.Invoke(
+    "RFCOMM OK"
+);
 
 
             socket = new StreamSocket();

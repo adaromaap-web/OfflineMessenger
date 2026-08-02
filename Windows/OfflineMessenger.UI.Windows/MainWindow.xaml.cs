@@ -117,7 +117,13 @@ public partial class MainWindow : Window
                 Dispatcher.Invoke(() =>
                 {
                     ChatList.Items.Add(
-                        $"Android: {message}"
+                        new ChatItem
+                        {
+                            Id = Guid.NewGuid(),
+                            Text = message,
+                            Status = "Delivered",
+                            IsMine = false
+                        }
                     );
                 });
             };
@@ -135,8 +141,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                "Bluetooth error: " + ex.Message);
+            LogBox.AppendText(
+                ex.ToString() + Environment.NewLine);
         }
     }
 
@@ -167,7 +173,8 @@ public partial class MainWindow : Window
         {
             Id = messageId,
             Text = text,
-            Status = "⏳ Sending"
+            Status = "⏳ Sending",
+            IsMine = true
         };
 
 

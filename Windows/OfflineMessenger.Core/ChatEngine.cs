@@ -258,6 +258,9 @@ public class ChatEngine
         MessageReceived?.Invoke(
     message
 );
+        DebugMessage?.Invoke(
+    $"WINDOWS BEFORE UI EVENT: [{message}] LENGTH={message.Length}"
+);
 
     }
 

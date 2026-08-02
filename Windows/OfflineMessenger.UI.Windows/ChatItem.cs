@@ -1,15 +1,13 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-
-namespace OfflineMessenger.UI.Windows;
 
 public class ChatItem : INotifyPropertyChanged
 {
     public Guid Id { get; set; }
 
-
     public string Text { get; set; } = "";
+
+    public bool IsMine { get; set; }
 
 
     private string _status = "";
@@ -28,8 +26,7 @@ public class ChatItem : INotifyPropertyChanged
 
 
     public string DisplayText =>
-        $"You: {Text}   {Status}";
-
+        $"{(IsMine ? "You" : "Android")}: {Text}   {Status}";
 
 
     public event PropertyChangedEventHandler? PropertyChanged;
