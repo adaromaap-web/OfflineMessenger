@@ -101,6 +101,10 @@ public partial class MainWindow : Window
                         IsMine = false
                     };
 
+                    Debug.WriteLine(
+    $"ADDING INCOMING MESSAGE: {item.Text}, IsMine={item.IsMine}"
+);
+
                     ChatList.Items.Add(item);
                 });
             };
@@ -154,6 +158,9 @@ public partial class MainWindow : Window
             IsMine = true
         };
 
+        Debug.WriteLine(
+    $"ADDING OWN MESSAGE: {item.Text}, IsMine={item.IsMine}"
+);
 
 
         _uiMessages[messageId] = item;

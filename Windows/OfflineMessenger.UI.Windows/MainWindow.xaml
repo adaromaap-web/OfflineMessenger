@@ -9,6 +9,12 @@
         Height="600"
         Width="800">
 
+    <Window.Resources>
+        <local:BoolToAlignmentConverter
+            x:Key="BoolToAlignmentConverter"/>
+    </Window.Resources>
+
+
     <Grid Margin="10">
 
         <Grid.RowDefinitions>
@@ -19,17 +25,41 @@
 
         <!-- Чат -->
         <ListBox
-            x:Name="ChatList"
-            Grid.Row="0"
-            Margin="0,0,0,10">
+    x:Name="ChatList"
+    Grid.Row="0"
+    Margin="0,0,0,10"
+    BorderThickness="0">
+
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment"
+                    Value="Stretch"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
+
 
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding DisplayText}" />
+
+                    <Border
+                Background="#E0E0E0"
+                CornerRadius="10"
+                Padding="10"
+                Margin="5"
+                MaxWidth="500"
+                HorizontalAlignment="{Binding IsMine, Converter={StaticResource BoolToAlignmentConverter}}">
+
+                        <TextBlock
+                    Text="{Binding DisplayText}"
+                    TextWrapping="Wrap"/>
+
+                    </Border>
+
                 </DataTemplate>
             </ListBox.ItemTemplate>
 
         </ListBox>
+
 
         <!-- Отправка -->
         <Grid Grid.Row="1"
