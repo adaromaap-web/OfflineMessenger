@@ -5,6 +5,8 @@ namespace OfflineMessenger.Tests;
 
 public class ProtocolTests
 {
+    // Проверка сериализации MessagePacket
+
     [Fact]
     public void MessagePacket_SerializeDeserialize_PreservesData()
     {
@@ -85,6 +87,8 @@ public class ProtocolTests
         );
     }
 
+    // Проверка сериализации HandshakePacket
+
     [Fact]
     public void HandshakePacket_SerializeDeserialize_PreservesPublicKey()
     {
@@ -118,6 +122,8 @@ public class ProtocolTests
             restored.PublicKey
         );
     }
+
+    // Проверка сериализации AckPacket
 
     [Fact]
     public void AckPacket_SerializeDeserialize_PreservesData()
@@ -157,6 +163,8 @@ public class ProtocolTests
             restored.Received
         );
     }
+
+    // Проверка сохранения типа сообщения
 
     [Fact]
     public void MessagePacket_SerializeDeserialize_PreservesMessageType()
@@ -212,6 +220,8 @@ public class ProtocolTests
             );
         }
     }
+
+    // Проверка больших сообщений
 
     [Fact]
     public void MessagePacket_SerializeDeserialize_PreservesLargePayload()
