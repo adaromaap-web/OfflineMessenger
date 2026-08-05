@@ -25,8 +25,8 @@ public class ChatItem : INotifyPropertyChanged
     }
 
 
-    public string DisplayText =>
-        $"{(IsMine ? "You" : "Android")}: {Text}   {Status}";
+      public string DisplayText =>
+          $" {Text}   ";
 
 
     public event PropertyChangedEventHandler? PropertyChanged;
