@@ -1,11 +1,7 @@
-package crypto
+package com.offlinemessenger.android.crypto
 
-import com.offlinemessenger.android.crypto.CryptoService
 import org.junit.Assert
 import org.junit.Test
-
-// Проверяет корректность шифрования и расшифровки AES-GCM.
-// Зашифрованные данные после decrypt должны полностью совпадать с оригиналом.
 
 class CryptoServiceTest {
 

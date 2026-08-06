@@ -1,10 +1,7 @@
 package com.offlinemessenger.android.crypto
 
-import org.junit.Assert.assertArrayEquals
+import org.junit.Assert
 import org.junit.Test
-
-// Проверяет обмен ключами ECDH.
-// Два участника должны получить одинаковый общий секрет после обмена публичными ключами.
 
 class KeyExchangeTest {
 
@@ -42,7 +39,7 @@ class KeyExchangeTest {
 
 
 
-        assertArrayEquals(
+        Assert.assertArrayEquals(
             aliceSecret,
             bobSecret
         )
