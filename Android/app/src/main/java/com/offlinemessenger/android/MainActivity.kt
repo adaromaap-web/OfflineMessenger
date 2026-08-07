@@ -25,9 +25,9 @@ class MainActivity : Activity() {
     private lateinit var messageInput: android.widget.EditText
     private lateinit var sendButton: android.widget.Button
 
-    private lateinit var adapter: android.widget.ArrayAdapter<String>
+    private lateinit var adapter: ChatAdapter
 
-    private val messages = mutableListOf<String>()
+    private val messages = mutableListOf<ChatItem>()
 
     private fun hasBluetoothPermission(): Boolean {
         return ActivityCompat.checkSelfPermission(
@@ -66,12 +66,7 @@ class MainActivity : Activity() {
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
 
-        adapter = android.widget.ArrayAdapter(
-            this,
-            android.R.layout.simple_list_item_1,
-            messages
-        )
-
+        adapter = ChatAdapter(messages)
         chatList.adapter = adapter
 
         if (!hasBluetoothPermission()) {
@@ -146,8 +141,14 @@ class MainActivity : Activity() {
                         chatEngine?.sendMessage(text)
 
                         this@MainActivity.adapter.add(
-                            "Me: $text"
+                            ChatItem(
+                                id = UUID.randomUUID(),
+                                text = text,
+                                isMine = true
+                            )
                         )
+
+                        messageInput.text.clear()
 
                         messageInput.text.clear()
                     }
@@ -170,7 +171,13 @@ class MainActivity : Activity() {
 
                     runOnUiThread {
 
-                        messages.add(message)
+                        messages.add(
+                            ChatItem(
+                                id = UUID.randomUUID(),
+                                text = message,
+                                isMine = false
+                            )
+                        )
 
                         this@MainActivity.adapter.notifyDataSetChanged()
                     }
