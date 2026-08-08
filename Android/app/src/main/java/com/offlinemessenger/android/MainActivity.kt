@@ -29,6 +29,8 @@ class MainActivity : Activity() {
 
     private val messages = mutableListOf<ChatItem>()
 
+    private lateinit var messageRepository: MessageRepository
+
     private fun hasBluetoothPermission(): Boolean {
         return ActivityCompat.checkSelfPermission(
             this,
@@ -62,12 +64,33 @@ class MainActivity : Activity() {
 
         setContentView(R.layout.activity_main)
 
+        messageRepository = MessageRepository(
+            MessageDatabase(this)
+        )
+
         chatList = findViewById(R.id.chatList)
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
 
         adapter = ChatAdapter(messages)
         chatList.adapter = adapter
+
+        val savedMessages = messageRepository.getAll()
+
+        messages.clear()
+
+        messages.addAll(
+            savedMessages.map { stored ->
+                ChatItem(
+                    id = stored.id,
+                    text = stored.text,
+                    isMine = stored.isMine,
+                    status = stored.status
+                )
+            }
+        )
+
+        adapter.notifyDataSetChanged()
 
         if (!hasBluetoothPermission()) {
             requestBluetoothPermission()
@@ -136,22 +159,46 @@ class MainActivity : Activity() {
 
                     val text = messageInput.text.toString()
 
-                    if (text.isNotBlank()) {
+                    if (text.isBlank()) {
+                        return@setOnClickListener
+                    }
 
+                    val messageId =
                         chatEngine?.sendMessage(text)
 
-                        this@MainActivity.adapter.add(
-                            ChatItem(
-                                id = UUID.randomUUID(),
-                                text = text,
-                                isMine = true
-                            )
-                        )
+                    if (messageId == null) {
+                        Toast.makeText(
+                            this,
+                            "Сообщение не отправлено: нет соединения",
+                            Toast.LENGTH_SHORT
+                        ).show()
 
-                        messageInput.text.clear()
-
-                        messageInput.text.clear()
+                        return@setOnClickListener
                     }
+
+                    val timestamp =
+                        System.currentTimeMillis()
+
+                    val item = ChatItem(
+                        id = messageId,
+                        text = text,
+                        isMine = true,
+                        status = ""
+                    )
+
+                    this@MainActivity.adapter.add(item)
+
+                    messageRepository.add(
+                        StoredMessage(
+                            id = messageId,
+                            text = text,
+                            isMine = true,
+                            timestamp = timestamp,
+                            status = ""
+                        )
+                    )
+
+                    messageInput.text.clear()
                 }
 
                 chatEngine!!.onHandshakeCompleted {

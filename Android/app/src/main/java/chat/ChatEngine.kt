@@ -359,7 +359,7 @@ class ChatEngine(
 
     fun sendMessage(
         message: String
-    ) {
+    ): UUID? {
 
         if (sessionKey == null) {
 
@@ -368,9 +368,8 @@ class ChatEngine(
                 "Cannot send message: no session key"
             )
 
-            return
+            return null
         }
-
 
         val encrypted =
             CryptoService().encrypt(
@@ -378,54 +377,41 @@ class ChatEngine(
                 message.toByteArray()
             )
 
-
         val packet =
             MessagePacket()
-
 
         packet.type =
             MessageType.Chat
 
-
         packet.sessionId =
             UUID.randomUUID()
-
 
         packet.messageId =
             UUID.randomUUID()
 
-
         packet.timestamp =
             System.currentTimeMillis() / 1000
-
 
         packet.payload =
             encrypted.payload
 
-
         packet.nonce =
             encrypted.nonce
 
-
         packet.tag =
             encrypted.tag
-
-
 
         transport.send(
             PacketSerializer.serialize(packet)
         )
 
-
         Log.d(
             "CHAT",
             "MESSAGE SENT: ${packet.messageId}"
         )
+
+        return packet.messageId
     }
-
-
-
-
 
     fun onMessageReceived(
         receiver: (String) -> Unit

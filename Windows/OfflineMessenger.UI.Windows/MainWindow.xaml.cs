@@ -1,14 +1,14 @@
 ﻿using OfflineMessenger.Bluetooth.Windows.Transport;
 using OfflineMessenger.Core;
 using OfflineMessenger.Crypto;
+using OfflineMessenger.Core.MessageHistory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
-
+using System.IO;
 
 namespace OfflineMessenger.UI.Windows;
-
 
 public partial class MainWindow : Window
 {
@@ -17,6 +17,8 @@ public partial class MainWindow : Window
     private ChatEngine? _bluetoothChat;
 
     private readonly Dictionary<Guid, ChatItem> _uiMessages = new();
+
+    private readonly MessageRepository _messageRepository;
 
 
     public MainWindow()
@@ -28,6 +30,10 @@ public partial class MainWindow : Window
 
 
         _bluetoothTransport = new BluetoothTransport();
+
+        _messageRepository =
+            new MessageRepository(
+                MessageDatabasePath.GetPath());
 
 
         Loaded += MainWindow_Loaded;
@@ -41,6 +47,24 @@ public partial class MainWindow : Window
     {
         try
         {
+            await _messageRepository.InitializeAsync();
+
+            var history = await _messageRepository.GetAllAsync();
+
+            foreach (var message in history)
+            {
+                var item = new ChatItem
+                {
+                    Id = message.Id,
+                    Text = message.Text,
+                    Status = message.Status,
+                    IsMine = message.IsMine
+                };
+
+                _uiMessages[item.Id] = item;
+                ChatList.Items.Add(item);
+            }
+
             await _bluetoothTransport.ConnectAsync("");
 
 
@@ -53,7 +77,6 @@ public partial class MainWindow : Window
                 _bluetoothTransport,
                 new CryptoService()
             );
-
 
 
             _bluetoothChat.MessageStatusChanged += (id, status) =>
@@ -70,7 +93,6 @@ public partial class MainWindow : Window
             };
 
 
-
             _bluetoothChat.StatusChanged += status =>
             {
                 Debug.WriteLine(
@@ -79,14 +101,12 @@ public partial class MainWindow : Window
             };
 
 
-
             _bluetoothChat.DebugMessage += message =>
             {
                 Debug.WriteLine(
                     message
                 );
             };
-
 
 
             _bluetoothChat.MessageReceived += message =>
@@ -102,13 +122,12 @@ public partial class MainWindow : Window
                     };
 
                     Debug.WriteLine(
-    $"ADDING INCOMING MESSAGE: {item.Text}, IsMine={item.IsMine}"
-);
+                        $"ADDING INCOMING MESSAGE: {item.Text}, IsMine={item.IsMine}"
+                    );
 
                     ChatList.Items.Add(item);
                 });
             };
-
 
 
             await _bluetoothChat.WaitForHandshakeAsync();
@@ -128,7 +147,6 @@ public partial class MainWindow : Window
     }
 
 
-
     private async void SendButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -144,10 +162,8 @@ public partial class MainWindow : Window
             return;
 
 
-
         var messageId =
             await _bluetoothChat.SendMessageAsync(text);
-
 
 
         var item = new ChatItem
@@ -158,9 +174,19 @@ public partial class MainWindow : Window
             IsMine = true
         };
 
+        await _messageRepository.AddAsync(
+            new StoredMessage
+            {
+                Id = messageId,
+                Text = text,
+                IsMine = true,
+                Timestamp = DateTime.Now,
+                Status = "⏳ Sending"
+            });
+
         Debug.WriteLine(
-    $"ADDING OWN MESSAGE: {item.Text}, IsMine={item.IsMine}"
-);
+            $"ADDING OWN MESSAGE: {item.Text}, IsMine={item.IsMine}"
+        );
 
 
         _uiMessages[messageId] = item;

@@ -15,9 +15,11 @@ class ChatAdapter(
 
     override fun getCount(): Int = items.size
 
-    override fun getItem(position: Int): ChatItem = items[position]
+    override fun getItem(position: Int): ChatItem =
+        items[position]
 
-    override fun getItemId(position: Int): Long = position.toLong()
+    override fun getItemId(position: Int): Long =
+        position.toLong()
 
     override fun getView(
         position: Int,
@@ -33,16 +35,10 @@ class ChatAdapter(
                     false
                 )
 
-        val message =
-            getItem(position)
+        val message = getItem(position)
 
         val textView =
-            view.findViewById<TextView>(
-                R.id.chatMessage
-            )
-
-        val container =
-            view as android.widget.FrameLayout
+            view.findViewById<TextView>(R.id.chatMessage)
 
         textView.text =
             if (message.status.isNotBlank()) {
@@ -62,13 +58,7 @@ class ChatAdapter(
                 )
             }
 
-        textView.setTextColor(
-            if (message.isMine) {
-                Color.BLACK
-            } else {
-                Color.BLACK
-            }
-        )
+        textView.setTextColor(Color.BLACK)
 
         textView.gravity =
             if (message.isMine) {
@@ -83,23 +73,23 @@ class ChatAdapter(
 
         params.gravity =
             if (message.isMine) {
-                android.view.Gravity.END
+                Gravity.END
             } else {
-                android.view.Gravity.START
+                Gravity.START
             }
 
         params.width =
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            ViewGroup.LayoutParams.WRAP_CONTENT
 
         params.height =
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            ViewGroup.LayoutParams.WRAP_CONTENT
 
         textView.layoutParams = params
 
         return view
     }
 
-    fun add(item: ChatItem) {
+    public fun add(item: ChatItem) {
         items.add(item)
         notifyDataSetChanged()
     }
