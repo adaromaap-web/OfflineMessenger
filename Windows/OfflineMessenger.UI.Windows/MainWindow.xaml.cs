@@ -1,4 +1,5 @@
-﻿using OfflineMessenger.Bluetooth.Windows.Transport;
+﻿
+using OfflineMessenger.Bluetooth.Windows.Transport;
 using OfflineMessenger.Core;
 using OfflineMessenger.Crypto;
 using OfflineMessenger.Core.MessageHistory;
@@ -6,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
-using System.IO;
 
 namespace OfflineMessenger.UI.Windows;
 
@@ -25,9 +25,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-
         SendButton.Click += SendButton_Click;
-
 
         _bluetoothTransport = new BluetoothTransport();
 
@@ -35,10 +33,8 @@ public partial class MainWindow : Window
             new MessageRepository(
                 MessageDatabasePath.GetPath());
 
-
         Loaded += MainWindow_Loaded;
     }
-
 
 
     private async void MainWindow_Loaded(
@@ -49,7 +45,10 @@ public partial class MainWindow : Window
         {
             await _messageRepository.InitializeAsync();
 
-            var history = await _messageRepository.GetAllAsync();
+
+            // Загружаем всю сохранённую историю
+            var history =
+                await _messageRepository.GetAllAsync();
 
             foreach (var message in history)
             {
@@ -62,11 +61,13 @@ public partial class MainWindow : Window
                 };
 
                 _uiMessages[item.Id] = item;
+
                 ChatList.Items.Add(item);
             }
 
-            await _bluetoothTransport.ConnectAsync("");
 
+            // Подключаем Bluetooth
+            await _bluetoothTransport.ConnectAsync("");
 
             Debug.WriteLine(
                 "Bluetooth connected"
@@ -79,18 +80,19 @@ public partial class MainWindow : Window
             );
 
 
-            _bluetoothChat.MessageStatusChanged += (id, status) =>
-            {
-                Dispatcher.Invoke(() =>
+            _bluetoothChat.MessageStatusChanged +=
+                (id, status) =>
                 {
-                    if (_uiMessages.TryGetValue(
-                            id,
-                            out var item))
+                    Dispatcher.Invoke(() =>
                     {
-                        item.Status = "✓ Delivered";
-                    }
-                });
-            };
+                        if (_uiMessages.TryGetValue(
+                                id,
+                                out var item))
+                        {
+                            item.Status = "";
+                        }
+                    });
+                };
 
 
             _bluetoothChat.StatusChanged += status =>
@@ -109,25 +111,48 @@ public partial class MainWindow : Window
             };
 
 
-            _bluetoothChat.MessageReceived += message =>
-            {
-                Dispatcher.Invoke(() =>
+            // Получили сообщение от собеседника
+            _bluetoothChat.MessageReceived +=
+                async message =>
                 {
+                    var messageId =
+                        Guid.NewGuid();
+
                     var item = new ChatItem
                     {
-                        Id = Guid.NewGuid(),
+                        Id = messageId,
                         Text = message,
                         Status = "✓ Delivered",
                         IsMine = false
                     };
 
+
                     Debug.WriteLine(
-                        $"ADDING INCOMING MESSAGE: {item.Text}, IsMine={item.IsMine}"
+                        $"ADDING INCOMING MESSAGE: " +
+                        $"{item.Text}, IsMine={item.IsMine}"
                     );
 
-                    ChatList.Items.Add(item);
-                });
-            };
+
+                    // Сохраняем входящее сообщение в БД
+                    await _messageRepository.AddAsync(
+                        new StoredMessage
+                        {
+                            Id = messageId,
+                            Text = message,
+                            IsMine = false,
+                            Timestamp = DateTime.Now,
+                            Status = ""
+                        });
+
+
+                    // Добавляем сообщение в UI
+                    Dispatcher.Invoke(() =>
+                    {
+                        _uiMessages[messageId] = item;
+
+                        ChatList.Items.Add(item);
+                    });
+                };
 
 
             await _bluetoothChat.WaitForHandshakeAsync();
@@ -136,7 +161,6 @@ public partial class MainWindow : Window
             Debug.WriteLine(
                 "Handshake completed"
             );
-
         }
         catch (Exception ex)
         {
@@ -170,10 +194,12 @@ public partial class MainWindow : Window
         {
             Id = messageId,
             Text = text,
-            Status = "⏳ Sending",
+            Status = "",
             IsMine = true
         };
 
+
+        // Сохраняем исходящее сообщение в БД
         await _messageRepository.AddAsync(
             new StoredMessage
             {
@@ -181,11 +207,13 @@ public partial class MainWindow : Window
                 Text = text,
                 IsMine = true,
                 Timestamp = DateTime.Now,
-                Status = "⏳ Sending"
+                Status = ""
             });
 
+
         Debug.WriteLine(
-            $"ADDING OWN MESSAGE: {item.Text}, IsMine={item.IsMine}"
+            $"ADDING OWN MESSAGE: " +
+            $"{item.Text}, IsMine={item.IsMine}"
         );
 
 
@@ -198,3 +226,4 @@ public partial class MainWindow : Window
         MessageInput.Clear();
     }
 }
+
