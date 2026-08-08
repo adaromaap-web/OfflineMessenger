@@ -1,3 +1,4 @@
+
 package com.offlinemessenger.android.chat
 
 import android.util.Log
@@ -9,13 +10,13 @@ import com.offlinemessenger.android.crypto.CryptoService
 import com.offlinemessenger.android.protocol.MessageType
 import com.offlinemessenger.android.protocol.PacketSerializer
 import com.offlinemessenger.android.protocol.HandshakePacket
+import com.offlinemessenger.android.protocol.AckPacket
+import com.offlinemessenger.android.protocol.MessagePacket
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
-import com.offlinemessenger.android.protocol.AckPacket
-import com.offlinemessenger.android.protocol.MessagePacket
 
 class ChatEngine(
     private val transport: ITransport
@@ -29,7 +30,7 @@ class ChatEngine(
 
     private var sessionKey: ByteArray? = null
 
-    private var messageReceiver: ((String) -> Unit)? = null
+    private var messageReceiver: ((UUID, String) -> Unit)? = null
 
     private var handshakeCompleted = false
 
@@ -51,27 +52,21 @@ class ChatEngine(
                     return@setReceiver
                 }
 
-
                 Log.d(
                     "CHAT",
                     "Packet type=${data[0].toInt()}, size=${data.size}"
                 )
 
-
                 when (data[0].toInt()) {
-
 
                     1 -> handleHandshakeInit(data)
 
-
                     2 -> handleHandshakeReply(data)
-
 
                     3 -> {
 
                         val packet =
                             PacketSerializer.deserialize(data)
-
 
                         val decrypted =
                             CryptoService().decrypt(
@@ -81,10 +76,8 @@ class ChatEngine(
                                 packet.tag
                             )
 
-
                         val message =
                             String(decrypted)
-
 
                         Log.d(
                             "CHAT",
@@ -116,9 +109,11 @@ class ChatEngine(
                             "BEFORE UI CALLBACK: $message"
                         )
 
-                        messageReceiver?.invoke(message)
+                        messageReceiver?.invoke(
+                            packet.messageId,
+                            message
+                        )
                     }
-
 
                     else -> {
 
@@ -128,7 +123,6 @@ class ChatEngine(
                         )
                     }
                 }
-
 
             } catch (e: Exception) {
 
@@ -141,7 +135,6 @@ class ChatEngine(
     }
 
 
-
     private fun handleHandshakeInit(
         data: ByteArray
     ) {
@@ -151,14 +144,11 @@ class ChatEngine(
             "HandshakeInit received"
         )
 
-
         val remoteKey =
             readPublicKey(data)
 
-
         keyPair =
             keyExchange.generateKeyPair()
-
 
         Log.d(
             "CHAT",
@@ -169,13 +159,11 @@ class ChatEngine(
             }"
         )
 
-
         sharedSecret =
             keyExchange.deriveSharedSecret(
                 keyPair!!.privateKey,
                 remoteKey
             )
-
 
         Log.d(
             "CHAT",
@@ -186,12 +174,10 @@ class ChatEngine(
             }"
         )
 
-
         sessionKey =
             Hkdf.deriveKey(
                 sharedSecret!!
             )
-
 
         Log.d(
             "CHAT",
@@ -202,23 +188,18 @@ class ChatEngine(
             }"
         )
 
-
         val reply =
             HandshakePacket()
-
 
         reply.type =
             MessageType.HandshakeReply
 
-
         reply.publicKey =
             keyPair!!.publicKey
-
 
         transport.send(
             PacketSerializer.serializeHandshake(reply)
         )
-
 
         Log.d(
             "CHAT",
@@ -227,25 +208,17 @@ class ChatEngine(
     }
 
 
-
-
-
     private fun handleHandshakeReply(
         data: ByteArray
     ) {
-
 
         Log.d(
             "CHAT",
             "HandshakeReply received"
         )
 
-
-
         val remoteKey =
             readPublicKey(data)
-
-
 
         if (keyPair == null) {
 
@@ -257,15 +230,11 @@ class ChatEngine(
             return
         }
 
-
-
         sharedSecret =
             keyExchange.deriveSharedSecret(
                 keyPair!!.privateKey,
                 remoteKey
             )
-
-
 
         Log.d(
             "CHAT",
@@ -276,14 +245,13 @@ class ChatEngine(
             }"
         )
 
-
-
         sessionKey =
             Hkdf.deriveKey(
                 sharedSecret!!
             )
 
         handshakeCompleted = true
+
         handshakeListener?.invoke()
 
         Log.d(
@@ -297,40 +265,28 @@ class ChatEngine(
     }
 
 
-
-
-
     private fun readPublicKey(
         data: ByteArray
     ): ByteArray {
-
 
         val input =
             DataInputStream(
                 ByteArrayInputStream(data)
             )
 
-
         // type
         input.readByte()
-
-
 
         val sizeBytes =
             ByteArray(4)
 
-
         input.readFully(sizeBytes)
-
-
 
         val size =
             ByteBuffer
                 .wrap(sizeBytes)
                 .order(ByteOrder.LITTLE_ENDIAN)
                 .int
-
-
 
         if (size <= 0 || size > 10000) {
 
@@ -339,22 +295,13 @@ class ChatEngine(
             )
         }
 
-
-
         val key =
             ByteArray(size)
 
-
-
         input.readFully(key)
-
-
 
         return key
     }
-
-
-
 
 
     fun sendMessage(
@@ -413,8 +360,9 @@ class ChatEngine(
         return packet.messageId
     }
 
+
     fun onMessageReceived(
-        receiver: (String) -> Unit
+        receiver: (UUID, String) -> Unit
     ) {
 
         Log.d(
@@ -424,6 +372,7 @@ class ChatEngine(
 
         messageReceiver = receiver
     }
+
 
     private fun sendAck(
         sessionId: UUID,
@@ -437,11 +386,9 @@ class ChatEngine(
                 received = true
             )
 
-
         transport.send(
             PacketSerializer.serializeAck(ack)
         )
-
 
         Log.d(
             "CHAT",
@@ -449,9 +396,11 @@ class ChatEngine(
         )
     }
 
+
     fun onHandshakeCompleted(
         listener: () -> Unit
     ) {
         handshakeListener = listener
     }
 }
+
